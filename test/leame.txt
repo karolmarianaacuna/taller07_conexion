@@ -1,0 +1,117 @@
+----- Pasos para la creacion del proyecto ---
+
+---------------------------------------
+1. crear el poryecto 
+    nest new nombre_proyecto
+---------------------------------------
+
+2.Configurar los perfiles de la base de datos
+
+---------------------------------------
+3. Instalar librerias 
+    npm i @nestjs/config
+    npm i typeorm
+    npm i typeorm-naming-strategies
+---------------------------------------
+4.Definir las variables del entorno del archivo .evn
+
+    BASE_DATOS = "db_miPrimerServedor"
+    USUARIO = "user_node"
+    CLAVE = "123456"
+    HOST = "localhost"
+    PUERTO = 5432
+    PUERTO_SERVIDOR = 3356
+---------------------------------------
+
+5.Configurar el modulo pricipal(moduleapp) para la lectura de las variables
+
+    import { Module } from '@nestjs/common';
+    import { AppController } from './app.controller';
+    import { AppService } from './app.service';
+    import { ConexionModule } from './modules/conexion/conexion.module';
+    import { ConfigModule } from '@nestjs/config';
+
+
+    @Module({   
+        imports: [ConexionModule,  ConfigModule.forRoot({
+            envFilePath: ".env", isGlobal: true
+        })],
+        controllers: [AppController],
+        providers: [AppService],
+    })
+
+export class AppModule {}
+
+
+--------------------------------------
+6.Configurar el puerto de la variable en el archivo main.ts
+
+    import { NestFactory } from '@nestjs/core';
+    import { AppModule } from './app.module';
+    import { Console } from 'console';
+
+    async function bootstrap() {
+        const app = await NestFactory.create(AppModule);
+        const puerto = Number(process.env.PUERTO_SERVIDOR)
+        await app.listen(puerto, ()=>{
+             console.log("Servidor funcionando en el puerto: "+puerto);
+        });
+    }
+    bootstrap();
+
+--------------------------------------
+7. en la caprpeta modulos conexion 
+crear un archivo llamado conexion.module.ts
+
+import { Module } from '@nestjs/common';
+import { DataSource } from 'typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
+
+@Module({
+
+    imports:[],
+    exports:[DataSource],
+    providers:[
+        {
+            provide: DataSource,
+            inject: [],
+            useFactory: async () => {
+                try {
+                    const poolConexion = new DataSource({
+                        type: 'postgres',
+                        host: String(process.env.HOST),
+                        port: Number(process.env.PUERTO),
+                        database: String(process.env.BASE_DATOS),
+                        username: String(process.env.USUARIO),
+                        password: String(process.env.CLAVE),
+
+                        synchronize: true,
+                        logging: true,
+                        namingStrategy: new SnakeNamingStrategy(),
+                        entities: []// aca van todas las clases entidades 
+
+
+                    });
+
+                    await poolConexion.initialize();
+                    console.log("Conexion establecida con :"+  String(process.env.BASE_DATOS))
+                    return poolConexion;
+
+                    
+                } catch (elError) {
+
+                    console.log("No se pudo Conectar");
+                    throw elError;
+                    
+                }
+
+         }
+        }
+    ],
+
+})
+export class ConexionModule {}
+
+
+
+
